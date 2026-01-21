@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odyssey Attendance System</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ Odyssey ⚔️</h1>
+        
+        <!-- Login Section -->
+        <div class="section active" id="loginSection">
+            <div class="credentials-hint">
+                <p><strong>Ancient Credentials:</strong></p>
+                <p>Hero: <strong>Username</strong></p>
+                <p>Secret: <strong>password123</strong></p>
+            </div>
+
+            <div class="error-message" id="loginError">
+                ⚔️ The gods reject your offering!
+            </div>
+
+            <form id="loginForm">
+                <div class="form-group">
+                    <label for="loginUsername">⚔️ Warrior Name</label>
+                    <input type="text" id="loginUsername" name="username" placeholder="Enter your name..." required>
+                </div>
+
+                <div class="form-group">
+                    <label for="loginPassword">🗡️ Sacred Words</label>
+                    <input type="password" id="loginPassword" name="password" placeholder="Speak the secret..." required>
+                </div>
+
+                <button type="submit" class="btn">⚔️ Enter the Saga ⚔️</button>
+                <button type="button" class="btn btn-secondary" id="viewAttendanceBtn">
+                    📜 Scroll of Warriors
+                </button>
+            </form>
+
+            <div class="toggle-link">
+                New to the saga? <a id="showSignup">Join the vengeance</a>
+            </div>
+        </div>
+
+        <!-- Signup Section -->
+        <div class="section" id="signupSection">
+            <div class="password-requirements">
+                <strong>⚔️ Sacred Oath Requirements:</strong>
+                <ul>
+                    <li>At least 8 runes of power</li>
+                    <li>Contains the mark of numbers</li>
+                    <li>Contains the mark of letters</li>
+                </ul>
+            </div>
+
+            <div class="error-message" id="signupError"></div>
+            <div class="success-message" id="signupSuccess">
+                ✅ You have joined the saga! Entering the battlefield...
+            </div>
+
+            <form id="signupForm">
+                <div class="form-group">
+                    <label for="signupUsername">⚔️ Warrior Name</label>
+                    <input type="text" id="signupUsername" name="username" placeholder="Choose your name.../ Username" required minlength="3">
+                </div>
+
+                <div class="form-group">
+                    <label for="signupEmail">📧 Herald's Scroll</label>
+                    <input type="email" id="signupEmail" name="email" placeholder="Your message scroll.../ Email" required pattern="^[a-zA-Z0-9._%+-]+@gmail.com$"
+                         title="Only Gmail addresses are available here" >
+                </div>
+
+                <div class="form-group">
+                    <label for="signupPassword">🗡️ Sacred Oath</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="signupPassword" name="password" placeholder="Create your oath.../ Password" required minlength="8">
+                        <button type="button" class="eye-button" data-target="signupPassword">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="signupConfirmPassword">🗡️ Confirm Oath</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="signupConfirmPassword" name="confirmPassword" placeholder="Repeat your oath.../ Confirm Password" required>
+                        <button type="button" class="eye-button" data-target="signupConfirmPassword">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn">⚔️ Forge My Legend ⚔️</button>
+            </form>
+
+            <div class="toggle-link">
+                Already in the saga? <a id="showLogin">Return to battle</a>
+            </div>
+        </div>
+
+        <!-- Success Section -->
+        <div class="section" id="successSection">
+            <div class="welcome-message">
+                ⚔️ Hail, <span id="welcomeUsername"></span>! ⚔️
+            </div>
+
+            <div class="timestamp-box">
+                <div class="timestamp-label">⏰ Moment of Reckoning</div>
+                <div class="timestamp-value" id="timestampDisplay"></div>
+            </div>
+
+            <p style="color: rgba(255, 255, 255, 0.8); margin: 25px 0; text-align: center; font-size: 16px;">Your presence has been carved into the annals of history.</p>
+
+            <button class="btn download-btn" id="downloadBtn">
+                📜 Claim Your Scroll
+            </button>
+
+            <button class="btn logout-btn" id="logoutBtn">
+                🚪 Leave the Saga
+            </button>
+        </div>
+    </div>
+
+    <!-- Attendance List Modal -->
+    <div class="modal-overlay" id="attendanceModal">
+        <div class="modal-content">
+            <h1>📜 Warriors' Chronicle</h1>
+            <div id="attendanceListContainer"></div>
+            <button class="btn download-btn" id="downloadModalBtn">📜 Download Scroll</button>
+            <button class="btn close-btn" id="closeModalBtn">Close the Scroll</button>
+        </div>
+    </div>
+    <script src ="script.js">
+    </script>
+</body>
+</html>
