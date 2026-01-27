@@ -1,0 +1,251 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Prelim Grade Calculator (JavaScript)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      /* === Color scheme (from your Java code) === */
+      --neon-purple: #8A2BE2; /* neonPurple */
+      --neon-pink:   #FF1493; /* neonPink   */
+      --neon-cyan:   #00B7EB; /* neonCyan   */
+      --neon-green:  #39FF14; /* neonGreen  */
+      --maroon:      #800000; /* maroon     */
+      --light-bg:    #F5F5FA; /* lightBg    */
+      --white-bg:    #FFFFFF; /* whiteBg    */
+
+      --text-main:   #1A1A1A;
+      --mono:        ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans:        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: var(--sans);
+      color: var(--text-main);
+      background: radial-gradient(1200px 800px at 10% -10%, rgba(255,20,147,0.05), transparent 60%),
+                  radial-gradient(900px 600px at 110% 10%, rgba(138,43,226,0.07), transparent 60%),
+                  var(--light-bg);
+    }
+
+    .container {
+      max-width: 880px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+
+    .title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--light-bg);
+      border: 3px solid var(--maroon);
+      border-radius: 14px;
+      padding: 14px;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 1.35rem;
+      color: var(--neon-pink);
+      letter-spacing: 0.4px;
+      text-align: center;
+    }
+
+    .panel {
+      background: var(--white-bg);
+      border: 3px solid var(--maroon);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .note {
+      color: var(--neon-purple);
+      font-weight: 700;
+      margin-bottom: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px 18px;
+    }
+    @media (max-width: 720px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    label {
+      display: block;
+      color: var(--neon-cyan);
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 2px solid var(--maroon);
+      font-size: 0.98rem;
+      color: var(--neon-purple);
+      background: #fff;
+      outline: none;
+      transition: box-shadow .2s ease, border-color .2s ease;
+    }
+    input[type="number"]:focus {
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 0 3px rgba(255,20,147,0.15);
+    }
+    .invalid {
+      border-color: #cc0000 !important;
+      box-shadow: 0 0 0 3px rgba(204,0,0,0.15) !important;
+    }
+
+    .hint {
+      font-size: 0.85rem;
+      color: #555;
+      margin-top: 4px;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .btn {
+      border: none;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: .2px;
+      padding: 10px 22px;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: transform .06s ease, filter .15s ease;
+      min-width: 140px;
+    }
+    .btn:active { transform: translateY(1px) scale(0.995); }
+    .btn-primary { background: var(--neon-green); }
+    .btn-primary:hover { filter: brightness(1.1); }
+    .btn-secondary { background: var(--neon-pink); }
+    .btn-secondary:hover { filter: brightness(1.1); }
+
+    .results {
+      background: var(--white-bg);
+      border: 3px solid var(--maroon);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .results-header {
+      padding: 12px 16px;
+      background: linear-gradient(90deg, rgba(138,43,226,0.12), rgba(0,183,235,0.12));
+      border-bottom: 1px solid rgba(0,0,0,0.06);
+      font-weight: 800;
+      color: var(--neon-purple);
+    }
+    pre#result {
+      margin: 0;
+      padding: 14px 16px;
+      font-family: var(--mono);
+      color: var(--neon-purple);
+      background: var(--white-bg);
+      min-height: 190px;
+      white-space: pre-wrap;   /* keeps formatting */
+      text-align: center;      /* centers all text */
+    }
+
+    .footer {
+      text-align: center;
+      color: #555;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="title">
+      <h1>✨ PRELIM GRADE CALCULATOR ✨</h1>
+    </div>
+
+    <section class="panel">
+  <div class="note">📝 Enter Attendance score and Lab Work grades (0–100).</div>
+
+  <div class="grid">
+    <!-- Attendance score -->
+    <div>
+      <label for="attendance">Attendance score (0–100)</label>
+      <input
+        type="number"
+        id="attendance"
+        min="0" max="100" step="0.01"
+        inputmode="decimal"
+        placeholder="e.g., 90"
+        required
+        aria-label="Attendance score, from 0 to 100"
+      />
+      <div class="hint">Must be 0–100</div>
+    </div>
+
+    <!-- Lab Works -->
+    <div>
+      <label for="lw1">Lab Work 1</label>
+      <input
+        type="number"
+        id="lw1"
+        min="0" max="100" step="0.01"
+        inputmode="decimal"
+        placeholder="0–100"
+        required
+        aria-label="Lab Work 1, from 0 to 100"
+      />
+    </div>
+    <div>
+      <label for="lw2">Lab Work 2</label>
+      <input
+        type="number"
+        id="lw2"
+        min="0" max="100" step="0.01"
+        inputmode="decimal"
+        placeholder="0–100"
+        required
+        aria-label="Lab Work 2, from 0 to 100"
+      />
+    </div>
+    <div>
+      <label for="lw3">Lab Work 3</label>
+      <input
+        type="number"
+        id="lw3"
+        min="0" max="100" step="0.01"
+        inputmode="decimal"
+        placeholder="0–100"
+        required
+        aria-label="Lab Work 3, from 0 to 100"
+      />
+    </div>
+  </div>
+
+  <!-- Buttons OUTSIDE the grid -->
+  <div class="btn-row">
+    <button class="btn btn-primary" id="btnCalc">SUBMIT</button>
+    <button class="btn btn-secondary" id="btnClear">CLEAR</button>
+  </div>
+</section>
+
+    <section class="results">
+      <div class="results-header">📊 Results</div>
+      <pre id="result"></pre>
+    </section>
+  <script src="app.js"></script>
+</body>
+</html>
