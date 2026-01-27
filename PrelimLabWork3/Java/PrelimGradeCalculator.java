@@ -48,7 +48,7 @@ public class PrelimGradeCalculator extends JFrame {
             BorderFactory.createEmptyBorder(12, 12, 12, 12)
         ));
         
-        JLabel noteLabel = new JLabel("📝 Enter grades (0-100 only)");
+        JLabel noteLabel = new JLabel("📝 Attendance (1-4), Lab Work (0-100)");
         noteLabel.setFont(new Font("Arial", Font.BOLD, 12));
         noteLabel.setForeground(neonPurple);
         
@@ -56,7 +56,7 @@ public class PrelimGradeCalculator extends JFrame {
         inputPanel.add(new JLabel(""));
         
         inputPanel.add(createLabel("Attendance:"));
-        attendanceField = createNumberField();
+        attendanceField = createNumberField(true);
         inputPanel.add(attendanceField);
         
         inputPanel.add(createLabel("Lab Work 1:"));
@@ -128,6 +128,10 @@ public class PrelimGradeCalculator extends JFrame {
     }
     
     private JTextField createNumberField() {
+        return createNumberField(false);
+    }
+    
+    private JTextField createNumberField(boolean isAttendance) {
         JTextField textField = new JTextField();
         textField.setFont(new Font("Arial", Font.PLAIN, 14));
         textField.setBackground(Color.WHITE);
@@ -138,7 +142,9 @@ public class PrelimGradeCalculator extends JFrame {
             BorderFactory.createEmptyBorder(5, 10, 5, 10)
         ));
         
-        // Restrict input to numbers only (0-100)
+        // Restrict input to numbers only (0-4 for attendance, 0-100 for lab work)
+        final int maxValue = isAttendance ? 4 : 100;
+        final int minValue = isAttendance ? 1 : 0;
         ((AbstractDocument) textField.getDocument()).setDocumentFilter(new DocumentFilter() {
             @Override
             public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) 
@@ -164,59 +170,84 @@ public class PrelimGradeCalculator extends JFrame {
             
             private boolean isValid(FilterBypass fb, int offset, String string, int length) 
                     throws BadLocationException {
-                // Only allow digits and decimal point
-                if (!string.matches("[0-9.]*")) {
-                    return false;
-                }
-                
-                String currentText = fb.getDocument().getText(0, fb.getDocument().getLength());
-                String newText = currentText.substring(0, offset) + string + 
-                               currentText.substring(offset + length);
-                
-                if (newText.isEmpty()) return true;
-                
-                // Prevent multiple leading zeros (like "000")
-                if (newText.matches("^0+[0-9]")) {
-                    return false;
-                }
-                
-                // Allow single zero or "0." but not multiple zeros
-                if (newText.equals("0") || newText.equals("0.")) {
-                    return true;
-                }
-                
-                // Prevent leading zeros before other numbers
-                if (newText.matches("^0[0-9]+")) {
-                    return false;
-                }
-                
-                // Check for valid number format and range
-                try {
-                    // Don't allow more than one decimal point
-                    if (newText.chars().filter(ch -> ch == '.').count() > 1) {
+                if (isAttendance) {
+                    // Attendance: only allow digits 0-4
+                    if (!string.matches("[0-9]*")) {
                         return false;
                     }
                     
-                    // Limit to 2 decimal places
-                    if (newText.contains(".")) {
-                        String[] parts = newText.split("\\.");
-                        if (parts.length > 1 && parts[1].length() > 2) {
-                            return false; // More than 2 decimal places
+                    String currentText = fb.getDocument().getText(0, fb.getDocument().getLength());
+                    String newText = currentText.substring(0, offset) + string + 
+                                   currentText.substring(offset + length);
+                    
+                    if (newText.isEmpty()) return true;
+                    
+                    // Prevent leading zeros like "00", "01"
+                    if (newText.matches("^0[0-9]")) {
+                        return false;
+                    }
+                    
+                    try {
+                        int value = Integer.parseInt(newText);
+                        return value >= 1 && value <= 4;
+                    } catch (NumberFormatException e) {
+                        return false;
+                    }
+                } else {
+                    // Lab work: allow digits and decimal point (0-100)
+                    if (!string.matches("[0-9.]*")) {
+                        return false;
+                    }
+                    
+                    String currentText = fb.getDocument().getText(0, fb.getDocument().getLength());
+                    String newText = currentText.substring(0, offset) + string + 
+                                   currentText.substring(offset + length);
+                    
+                    if (newText.isEmpty()) return true;
+                    
+                    // Prevent multiple leading zeros (like "000")
+                    if (newText.matches("^0+[0-9]")) {
+                        return false;
+                    }
+                    
+                    // Allow single zero or "0." but not multiple zeros
+                    if (newText.equals("0") || newText.equals("0.")) {
+                        return true;
+                    }
+                    
+                    // Prevent leading zeros before other numbers
+                    if (newText.matches("^0[0-9]+")) {
+                        return false;
+                    }
+                    
+                    // Check for valid number format and range
+                    try {
+                        // Don't allow more than one decimal point
+                        if (newText.chars().filter(ch -> ch == '.').count() > 1) {
+                            return false;
                         }
+                        
+                        // Limit to 2 decimal places
+                        if (newText.contains(".")) {
+                            String[] parts = newText.split("\\.");
+                            if (parts.length > 1 && parts[1].length() > 2) {
+                                return false; // More than 2 decimal places
+                            }
+                        }
+                        
+                        // If it ends with a decimal point, it's valid (user is still typing)
+                        if (newText.endsWith(".")) {
+                            if (newText.length() == 1) return true; // Just "."
+                            double baseValue = Double.parseDouble(newText.substring(0, newText.length() - 1));
+                            return baseValue >= 0 && baseValue <= 100;
+                        }
+                        
+                        double value = Double.parseDouble(newText);
+                        return value >= 0 && value <= 100;
+                    } catch (NumberFormatException e) {
+                        // Allow incomplete numbers but with restrictions
+                        return newText.matches("^[0-9]{0,3}\\.?[0-9]{0,2}$");
                     }
-                    
-                    // If it ends with a decimal point, it's valid (user is still typing)
-                    if (newText.endsWith(".")) {
-                        if (newText.length() == 1) return true; // Just "."
-                        double baseValue = Double.parseDouble(newText.substring(0, newText.length() - 1));
-                        return baseValue >= 0 && baseValue <= 100;
-                    }
-                    
-                    double value = Double.parseDouble(newText);
-                    return value >= 0 && value <= 100;
-                } catch (NumberFormatException e) {
-                    // Allow incomplete numbers but with restrictions
-                    return newText.matches("^[0-9]{0,3}\\.?[0-9]{0,2}$");
                 }
             }
         });
@@ -277,14 +308,33 @@ public class PrelimGradeCalculator extends JFrame {
     private void calculateGrades() {
         try {
             // Get and validate inputs
-            double attendance = validateInput(attendanceField.getText(), "Attendance");
+            int attendanceCount = (int) validateInput(attendanceField.getText(), "Attendance");
+            
+            // Check if attendance is less than 2 (meaning 3+ absences out of 4)
+            if (attendanceCount < 2) {
+                StringBuilder result = new StringBuilder();
+                result.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+                result.append("  ❌ AUTOMATIC FAILURE\n");
+                result.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
+                result.append(String.format("  Total Attendance: %d/4\n\n", attendanceCount));
+                result.append("  You have exceeded 3 absences.\n");
+                result.append("  You are automatically FAILED.\n\n");
+                result.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+                
+                resultArea.setText(result.toString());
+                return;
+            }
+            
+            // Convert attendance count to percentage
+            double attendancePercentage = (attendanceCount / 4.0) * 100;
+            
             double labWork1 = validateInput(labWork1Field.getText(), "Lab Work 1");
             double labWork2 = validateInput(labWork2Field.getText(), "Lab Work 2");
             double labWork3 = validateInput(labWork3Field.getText(), "Lab Work 3");
             
             // Calculations
             double labWorkAverage = (labWork1 + labWork2 + labWork3) / 3;
-            double classStanding = (attendance * 0.40) + (labWorkAverage * 0.60);
+            double classStanding = (attendancePercentage * 0.40) + (labWorkAverage * 0.60);
             double requiredExamToPass = (75 - (classStanding * 0.70)) / 0.30;
             double requiredExamForExcellent = (100 - (classStanding * 0.70)) / 0.30;
             
@@ -293,7 +343,11 @@ public class PrelimGradeCalculator extends JFrame {
             result.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
             result.append("  📊 YOUR GRADES\n");
             result.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-            result.append(String.format("  Attendance:        %s\n", df.format(attendance)));
+            result.append(String.format("  Total Attendance:  %d/4\n", attendanceCount));
+            result.append(String.format("  Attendance %%:      %s\n", df.format(attendancePercentage)));
+            result.append(String.format("  Lab Work 1:        %s\n", df.format(labWork1)));
+            result.append(String.format("  Lab Work 2:        %s\n", df.format(labWork2)));
+            result.append(String.format("  Lab Work 3:        %s\n", df.format(labWork3)));
             result.append(String.format("  Lab Work Avg:      %s\n", df.format(labWorkAverage)));
             result.append(String.format("  Class Standing:    %s\n", df.format(classStanding)));
             result.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
@@ -305,7 +359,7 @@ public class PrelimGradeCalculator extends JFrame {
             if (requiredExamToPass <= 0) {
                 result.append("    ✅ Already Passing!\n");
             } else if (requiredExamToPass > 100) {
-                result.append(String.format("    ❌ Need: %s (Impossible)\n", df.format(requiredExamToPass)));
+                result.append("    ❌ grade not achievable\n");
             } else {
                 result.append(String.format("    📝 Need: %s\n", df.format(requiredExamToPass)));
             }
@@ -317,7 +371,7 @@ public class PrelimGradeCalculator extends JFrame {
             if (requiredExamForExcellent <= 0) {
                 result.append("    ⭐ Already Excellent!\n");
             } else if (requiredExamForExcellent > 100) {
-                result.append("    ❌ Not Achievable\n");
+                result.append("    ❌ grade not achievable\n");
             } else {
                 result.append(String.format("    📝 Need: %s\n", df.format(requiredExamForExcellent)));
             }
@@ -340,8 +394,15 @@ public class PrelimGradeCalculator extends JFrame {
         
         try {
             double value = Double.parseDouble(input.trim());
-            if (value < 0 || value > 100) {
-                throw new IllegalArgumentException(fieldName + " must be between 0 and 100!");
+            
+            if ("Attendance".equals(fieldName)) {
+                if (value < 1 || value > 4) {
+                    throw new IllegalArgumentException(fieldName + " must be between 1 and 4!");
+                }
+            } else {
+                if (value < 0 || value > 100) {
+                    throw new IllegalArgumentException(fieldName + " must be between 0 and 100!");
+                }
             }
             return value;
         } catch (NumberFormatException e) {

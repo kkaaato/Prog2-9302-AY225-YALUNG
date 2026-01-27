@@ -22,12 +22,16 @@ function readDoubleRange(value, minInclusive, maxInclusive) {
   return v;
 }
 
-/* Strict input guards: only allow 0–100, digits and a single dot, with live range enforcement */
+/* Strict input guards: allow 1–4 for attendance, 0–100 for lab work */
 function attachNumberGuards(ids) {
   ids.forEach(id => {
     const el = $(id);
+    const isAttendance = id === 'attendance';
+    const maxValue = isAttendance ? 4 : 100;
+    const minValue = isAttendance ? 1 : 0;
+    const allowDecimal = !isAttendance;
 
-    // Block illegal keystrokes (letters, minus, spaces, multiple dots, etc.)
+    // Block illegal keystrokes (letters, minus, spaces, etc.)
     el.addEventListener('beforeinput', (e) => {
       if (e.inputType === 'insertFromPaste') return; // handle in 'input'
       if (e.inputType.startsWith('delete')) return;  // allow deletions/backspace
@@ -35,14 +39,15 @@ function attachNumberGuards(ids) {
       const data = e.data;
       if (data == null) return;
 
-      // Allow digits and dot only
-      if (!/[0-9.]/.test(data)) {
+      // Allow digits only for attendance, digits and dot for lab work
+      const allowedPattern = allowDecimal ? /[0-9.]/ : /[0-9]/;
+      if (!allowedPattern.test(data)) {
         e.preventDefault();
         return;
       }
 
-      // Only one dot allowed
-      if (data === '.' && el.value.includes('.')) {
+      // Only one dot allowed (for lab work only)
+      if (allowDecimal && data === '.' && el.value.includes('.')) {
         e.preventDefault();
         return;
       }
@@ -52,31 +57,44 @@ function attachNumberGuards(ids) {
       const selEnd   = el.selectionEnd ?? el.value.length;
       const next = el.value.slice(0, selStart) + data + el.value.slice(selEnd);
 
-      // Allow "0" or "0." or "100" partially while typing
-      // Reject leading zeros like "00", "01" (except "0." case)
-      if (/^0[0-9]/.test(next) && !/^0\./.test(next)) {
+      // For lab work: reject leading zeros like "00", "01" (except "0." case)
+      if (allowDecimal && /^0[0-9]/.test(next) && !/^0\./.test(next)) {
         e.preventDefault();
         return;
       }
 
-      // If it's only a dot or starts with dot, normalize to "0."
-      if (next === '.' || next === '.0') {
-        // Let it pass; we'll normalize in 'input'
+      // For attendance: reject leading zeros
+      if (!allowDecimal && /^0[0-9]/.test(next)) {
+        e.preventDefault();
         return;
       }
 
-      // Check numeric and within 0–100 when complete number
-      if (/^\d*\.?\d*$/.test(next)) {
-        const num = Number(next);
-        // If next ends with a dot, user is still typing => allow
-        const endsWithDot = next.endsWith('.');
-        if (!Number.isNaN(num) && !endsWithDot) {
-          if (num < 0 || num > 100) {
+      // If it's only a dot or starts with dot (lab work only), normalize to "0."
+      if (allowDecimal && (next === '.' || next === '.0')) {
+        return;
+      }
+
+      // Check numeric and within range
+      if (allowDecimal) {
+        if (/^\d*\.?\d*$/.test(next)) {
+          const num = Number(next);
+          const endsWithDot = next.endsWith('.');
+          if (!Number.isNaN(num) && !endsWithDot) {
+            if (num < 0 || num > maxValue) {
+              e.preventDefault();
+            }
+          }
+        } else {
+          e.preventDefault();
+        }
+      } else {
+        // Attendance: integers only
+        if (/^\d+$/.test(next)) {
+          const num = Number(next);
+          if (num < 1 || num > maxValue) {
             e.preventDefault();
           }
         }
-      } else {
-        e.preventDefault();
       }
     });
 
@@ -84,47 +102,64 @@ function attachNumberGuards(ids) {
     el.addEventListener('input', () => {
       let v = el.value;
 
-      // Normalize leading dot to "0."
-      if (v.startsWith('.')) v = '0' + v;
+      if (allowDecimal) {
+        // For lab work
+        if (v.startsWith('.')) v = '0' + v;
+        const parts = v.replace(/[^0-9.]/g, '').split('.');
+        v = parts.shift() + (parts.length ? '.' + parts.join('') : '');
 
-      // Remove invalid chars (keep digits and at most one dot)
-      const parts = v.replace(/[^0-9.]/g, '').split('.');
-      v = parts.shift() + (parts.length ? '.' + parts.join('') : '');
-
-      // Prevent multi leading zeros like "00" (allow "0." case)
-      if (/^0[0-9]/.test(v) && !/^0\./.test(v)) {
-        // drop the extra leading zero(s)
-        v = v.replace(/^0+/, '');
-        if (v === '') v = '0';
-      }
-
-      // Clamp to [0, 100] if it parses and doesn't end with dot
-      if (v !== '' && !v.endsWith('.')) {
-        const num = Number(v);
-        if (Number.isFinite(num)) {
-          if (num < 0) v = '0';
-          if (num > 100) v = '100';
+        if (/^0[0-9]/.test(v) && !/^0\./.test(v)) {
+          v = v.replace(/^0+/, '');
+          if (v === '') v = '0';
         }
-      }
 
-      el.value = v;
-      // Optional: live validity hint
-      if (v === '' || v === '.' || v === '0.') {
-        el.setCustomValidity('Please enter a number from 0 to 100.');
-      } else {
-        const num = Number(v);
-        if (!Number.isFinite(num) || num < 0 || num > 100) {
+        if (v !== '' && !v.endsWith('.')) {
+          const num = Number(v);
+          if (Number.isFinite(num)) {
+            if (num < 0) v = '0';
+            if (num > 100) v = '100';
+          }
+        }
+
+        el.value = v;
+        if (v === '' || v === '.' || v === '0.') {
           el.setCustomValidity('Please enter a number from 0 to 100.');
         } else {
-          el.setCustomValidity('');
+          const num = Number(v);
+          if (!Number.isFinite(num) || num < 0 || num > 100) {
+            el.setCustomValidity('Please enter a number from 0 to 100.');
+          } else {
+            el.setCustomValidity('');
+          }
+        }
+      } else {
+        // Attendance: integers only 1-4
+        v = v.replace(/[^0-9]/g, '');
+        if (v === '') {
+          // Allow empty for now
+        } else {
+          const num = Number(v);
+          if (num < 1) v = '1';
+          if (num > 4) v = '4';
+        }
+        el.value = v;
+        if (v === '') {
+          el.setCustomValidity('Please enter total attendance (1-4).');
+        } else {
+          const num = Number(v);
+          if (!Number.isFinite(num) || num < 1 || num > 4) {
+            el.setCustomValidity('Please enter a number from 1 to 4.');
+          } else {
+            el.setCustomValidity('');
+          }
         }
       }
     });
 
-    // Final clamp on blur (ensures "0.", "." become "0")
+    // Final clamp on blur
     el.addEventListener('blur', () => {
       let v = el.value;
-      if (v === '' || v === '.' || v === '0.') {
+      if (v === '' || (allowDecimal && (v === '.' || v === '0.'))) {
         el.value = '';
         return;
       }
@@ -134,7 +169,7 @@ function attachNumberGuards(ids) {
         return;
       }
       if (num < 0) num = 0;
-      if (num > 100) num = 100;
+      if (num > maxValue) num = maxValue;
       el.value = String(num);
     });
   });
@@ -186,13 +221,35 @@ function calculate() {
   if (!ensureAllInputsFilled(ids)) return;
 
   try {
-    const attendanceScore = readDoubleRange($("attendance").value, 0, 100);
+    const attendanceCount = Number($("attendance").value);
+    
+    // Check if attendance is less than 2 (meaning 3+ absences out of 4)
+    if (attendanceCount < 2) {
+      const lines = [];
+      lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      lines.push("  ❌ AUTOMATIC FAILURE");
+      lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      lines.push("");
+      lines.push(`  Total Attendance: ${attendanceCount}/4`);
+      lines.push("");
+      lines.push("  You have exceeded 3 absences.");
+      lines.push("  You are automatically FAILED.");
+      lines.push("");
+      lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+      
+      out.textContent = lines.join("\n");
+      return;
+    }
+    
+    // Convert attendance count to percentage
+    const attendancePercentage = (attendanceCount / 4) * 100;
+    
     const lw1 = readDoubleRange($("lw1").value, 0, 100);
     const lw2 = readDoubleRange($("lw2").value, 0, 100);
     const lw3 = readDoubleRange($("lw3").value, 0, 100);
 
     const labWorkAverage = (lw1 + lw2 + lw3) / 3.0;
-    const classStanding = (attendanceScore * WEIGHT_ATTENDANCE) + (labWorkAverage * WEIGHT_LAB_AVG);
+    const classStanding = (attendancePercentage * WEIGHT_ATTENDANCE) + (labWorkAverage * WEIGHT_LAB_AVG);
 
     const needPass = requiredExamForTarget(classStanding, TARGET_PASS);
     const needExcellent = requiredExamForTarget(classStanding, TARGET_EXCELLENT);
@@ -201,7 +258,8 @@ function calculate() {
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("  📊 YOUR GRADES");
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    lines.push(`  Attendance score:  ${fmt(attendanceScore)}`);
+    lines.push(`  Total Attendance:  ${attendanceCount}/4`);
+    lines.push(`  Attendance %:      ${fmt(attendancePercentage)}`);
     lines.push(`  Lab Work 1:        ${fmt(lw1)}`);
     lines.push(`  Lab Work 2:        ${fmt(lw2)}`);
     lines.push(`  Lab Work 3:        ${fmt(lw3)}`);
