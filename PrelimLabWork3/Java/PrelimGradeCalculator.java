@@ -317,7 +317,7 @@ public class PrelimGradeCalculator extends JFrame {
             if (requiredExamForExcellent <= 0) {
                 result.append("    ⭐ Already Excellent!\n");
             } else if (requiredExamForExcellent > 100) {
-                result.append(String.format("    ❌ Need: %s (Impossible)\n", df.format(requiredExamForExcellent)));
+                result.append("    ❌ Not Achievable\n");
             } else {
                 result.append(String.format("    📝 Need: %s\n", df.format(requiredExamForExcellent)));
             }

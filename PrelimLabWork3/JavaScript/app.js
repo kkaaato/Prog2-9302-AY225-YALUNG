@@ -170,7 +170,7 @@ function buildRequirement(required, label) {
   if (required <= 0) {
     lines.push(`    ✅ Already meets or exceeds this target.`);
   } else if (required > 100) {
-    lines.push(`    ❌ Need: ${fmt(required)} (Impossible)`);
+    lines.push(`    ❌ Not Achievable`);
   } else {
     lines.push(`    📝 Need: ${fmt(required)}`);
   }
