@@ -174,26 +174,26 @@
   <div class="container">
 
     <div class="title">
-      <h1>✨ PRELIM GRADE CALCULATOR ✨</h1>
+      <h1>PRELIM GRADE CALCULATOR</h1>
     </div>
 
     <section class="panel">
-  <div class="note">📝 Enter Attendance score and Lab Work grades (0–100).</div>
+  <div class="note">Enter Attendance score and Lab Work grades (0–100).</div>
 
   <div class="grid">
     <!-- Total Attendance -->
     <div>
-      <label for="attendance">Total Attendance (out of 4)</label>
+      <label for="attendance">Total Attendance (out of 5)</label>
       <input
         type="number"
         id="attendance"
-        min="1" max="4" step="1"
+        min="0" max="5" step="1"
         inputmode="numeric"
         placeholder="e.g., 3"
         required
         aria-label="Total attendance out of 4"
       />
-      <div class="hint">Enter 1–4 (3+ absences = auto fail)</div>
+      <div class="hint">Enter 0–5 (3+ unexcused absences = auto fail)</div>
     </div>
 
     <!-- Lab Works -->
@@ -243,7 +243,7 @@
 </section>
 
     <section class="results">
-      <div class="results-header">📊 Results</div>
+      <div class="results-header">Results</div>
       <pre id="result"></pre>
     </section>
   <script src="app.js"></script>

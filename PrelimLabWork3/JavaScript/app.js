@@ -13,6 +13,182 @@ const TARGET_EXCELLENT = 100;
 const $ = (id) => document.getElementById(id);
 const fmt = (n) => Number.isFinite(n) ? n.toFixed(2) : "—";
 
+/* Custom confirmation dialog with Yes/No buttons */
+function showConfirmDialog(message) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
+      justify-content: center; z-index: 10000;
+    `;
+
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background: white; padding: 20px; border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); max-width: 400px;
+      text-align: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    `;
+
+    const text = document.createElement('p');
+    text.textContent = message;
+    text.style.cssText = `margin: 0 0 20px 0; font-size: 16px; color: #333;`;
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `display: flex; gap: 10px; justify-content: center;`;
+
+    const yesBtn = document.createElement('button');
+    yesBtn.textContent = 'Yes';
+    yesBtn.style.cssText = `
+      padding: 8px 20px; background: #39FF14; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-weight: bold;
+    `;
+    yesBtn.onclick = () => {
+      overlay.remove();
+      resolve(true);
+    };
+
+    const noBtn = document.createElement('button');
+    noBtn.textContent = 'No';
+    noBtn.style.cssText = `
+      padding: 8px 20px; background: #FF1493; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-weight: bold;
+    `;
+    noBtn.onclick = () => {
+      overlay.remove();
+      resolve(false);
+    };
+
+    buttonContainer.appendChild(yesBtn);
+    buttonContainer.appendChild(noBtn);
+    dialog.appendChild(text);
+    dialog.appendChild(buttonContainer);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+  });
+}
+
+/* Custom prompt dialog for excused absences */
+function showExcusedAbsencesDialog(maxValue) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); display: flex; align-items: center;
+      justify-content: center; z-index: 10000;
+    `;
+
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background: white; padding: 20px; border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2); max-width: 400px;
+      text-align: center; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    `;
+
+    const label = document.createElement('p');
+    label.textContent = 'Select number of excused absences:';
+    label.style.cssText = `margin: 0 0 15px 0; font-size: 16px; color: #333;`;
+
+    const inputContainer = document.createElement('div');
+    inputContainer.style.cssText = `display: flex; align-items: center; gap: 10px; margin-bottom: 15px;`;
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.value = '0';
+    input.readOnly = true;
+    input.style.cssText = `
+      flex: 1; padding: 8px; border: 2px solid #800000;
+      border-radius: 4px; font-size: 14px; box-sizing: border-box;
+      text-align: center; font-weight: bold;
+    `;
+
+    // Prevent any text input
+    input.addEventListener('beforeinput', (e) => e.preventDefault());
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const current = Number(input.value);
+        if (current < maxValue) {
+          input.value = String(current + 1);
+        }
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const current = Number(input.value);
+        if (current > 0) {
+          input.value = String(current - 1);
+        }
+      } else if (!/[ArrowUp|ArrowDown]/.test(e.key)) {
+        e.preventDefault();
+      }
+    });
+
+    const upBtn = document.createElement('button');
+    upBtn.textContent = '▲';
+    upBtn.style.cssText = `
+      padding: 8px 12px; background: #39FF14; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;
+    `;
+    upBtn.onclick = () => {
+      const current = Number(input.value);
+      if (current < maxValue) {
+        input.value = String(current + 1);
+      }
+    };
+
+    const downBtn = document.createElement('button');
+    downBtn.textContent = '▼';
+    downBtn.style.cssText = `
+      padding: 8px 12px; background: #39FF14; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px;
+    `;
+    downBtn.onclick = () => {
+      const current = Number(input.value);
+      if (current > 0) {
+        input.value = String(current - 1);
+      }
+    };
+
+    inputContainer.appendChild(input);
+    inputContainer.appendChild(upBtn);
+    inputContainer.appendChild(downBtn);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.style.cssText = `display: flex; gap: 10px; justify-content: center;`;
+
+    const okBtn = document.createElement('button');
+    okBtn.textContent = 'OK';
+    okBtn.style.cssText = `
+      padding: 8px 20px; background: #39FF14; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-weight: bold;
+    `;
+    okBtn.onclick = () => {
+      overlay.remove();
+      resolve(Number(input.value));
+    };
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.style.cssText = `
+      padding: 8px 20px; background: #FF1493; color: white; border: none;
+      border-radius: 4px; cursor: pointer; font-weight: bold;
+    `;
+    cancelBtn.onclick = () => {
+      overlay.remove();
+      resolve(null);
+    };
+
+    buttonContainer.appendChild(okBtn);
+    buttonContainer.appendChild(cancelBtn);
+    dialog.appendChild(label);
+    dialog.appendChild(inputContainer);
+    dialog.appendChild(buttonContainer);
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+
+    input.focus();
+  });
+}
+
 /* Validation */
 function readDoubleRange(value, minInclusive, maxInclusive) {
   const v = Number(value);
@@ -22,14 +198,15 @@ function readDoubleRange(value, minInclusive, maxInclusive) {
   return v;
 }
 
-/* Strict input guards: allow 1–4 for attendance, 0–100 for lab work */
+/* Strict input guards: allow 0–4 for attendance/excused, 0–100 for lab work */
 function attachNumberGuards(ids) {
   ids.forEach(id => {
     const el = $(id);
     const isAttendance = id === 'attendance';
-    const maxValue = isAttendance ? 4 : 100;
-    const minValue = isAttendance ? 1 : 0;
-    const allowDecimal = !isAttendance;
+    const isExcused = id === 'excused';
+    const maxValue = (isAttendance || isExcused) ? 4 : 100;
+    const minValue = 0;
+    const allowDecimal = !isAttendance && !isExcused;
 
     // Block illegal keystrokes (letters, minus, spaces, etc.)
     el.addEventListener('beforeinput', (e) => {
@@ -63,8 +240,14 @@ function attachNumberGuards(ids) {
         return;
       }
 
-      // For attendance: reject leading zeros
-      if (!allowDecimal && /^0[0-9]/.test(next)) {
+      // For attendance and excused, no decimal allowed
+      if (!allowDecimal && data === '.') {
+        e.preventDefault();
+        return;
+      }
+
+      // For attendance and excused: reject leading zeros
+      if ((isAttendance || isExcused) && /^0[0-9]/.test(next)) {
         e.preventDefault();
         return;
       }
@@ -88,7 +271,7 @@ function attachNumberGuards(ids) {
           e.preventDefault();
         }
       } else {
-        // Attendance: integers only
+        // Attendance and Excused: integers only
         if (/^\d+$/.test(next)) {
           const num = Number(next);
           if (num < 0 || num > maxValue) {
@@ -133,22 +316,22 @@ function attachNumberGuards(ids) {
           }
         }
       } else {
-        // Attendance: integers only 0-4
+        // Attendance and Excused: integers only 0-5
         v = v.replace(/[^0-9]/g, '');
         if (v === '') {
           // Allow empty for now
         } else {
           const num = Number(v);
           if (num < 0) v = '0';
-          if (num > 4) v = '4';
+          if (num > 5) v = '5';
         }
         el.value = v;
         if (v === '') {
-          el.setCustomValidity('Please enter total attendance (0-4).');
+          el.setCustomValidity(`Please enter ${isExcused ? 'excused absences' : 'total attendance'} (0-5).`);
         } else {
           const num = Number(v);
-          if (!Number.isFinite(num) || num < 0 || num > 4) {
-            el.setCustomValidity('Please enter a number from 0 to 4.');
+          if (!Number.isFinite(num) || num < 0 || num > 5) {
+            el.setCustomValidity('Please enter a number from 0 to 5.');
           } else {
             el.setCustomValidity('');
           }
@@ -181,6 +364,8 @@ function ensureAllInputsFilled(ids) {
 
   const missing = ids.filter(id => {
     const el = $(id);
+    // excused field defaults to 0, so allow it to be empty
+    if (id === 'excused') return false;
     return el.value === "" || el.value === null;
   });
 
@@ -234,18 +419,56 @@ function calculate() {
   if (!ensureAllInputsFilled(ids)) return;
 
   try {
+    const totalSessions = 5;
     const attendanceCount = Number($("attendance").value);
+    const missingSessions = totalSessions - attendanceCount;
     
-    // Check if attendance is less than 2 (meaning 3+ absences out of 4)
-    if (attendanceCount < 2) {
+    let excusedAbsences = 0;
+
+    // Ask for excused absences only if attendance is incomplete
+    if (attendanceCount < totalSessions) {
+      showConfirmDialog(`You have ${missingSessions} absence(s).\nAny excused absences?`)
+        .then(async (hasExcused) => {
+          if (hasExcused) {
+            const input = await showExcusedAbsencesDialog(missingSessions);
+            
+            if (input !== null) {
+              excusedAbsences = input;
+            }
+          }
+          
+          // Continue with calculation
+          performCalculation(attendanceCount, excusedAbsences);
+        });
+    } else {
+      // No absences, proceed directly
+      performCalculation(attendanceCount, 0);
+    }
+  } catch (err) {
+    alert(`Input Error: ${err.message}`);
+  }
+}
+
+function performCalculation(attendanceCount, excusedAbsences) {
+  const out = $("result");
+  const totalSessions = 5;
+
+  try {
+    // Calculate unexcused absences
+    const unexcusedAbsences = Math.max(0, totalSessions - attendanceCount - excusedAbsences);
+
+    // Auto-fail rule: 3 or more unexcused absences
+    if (unexcusedAbsences >= 3) {
       const lines = [];
       lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       lines.push("  ❌ AUTOMATIC FAILURE");
       lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       lines.push("");
-      lines.push(`  Total Attendance: ${attendanceCount}/4`);
+      lines.push(`  Present:            ${attendanceCount}/${totalSessions}`);
+      lines.push(`  Excused Absences:   ${excusedAbsences}`);
+      lines.push(`  Unexcused Absences: ${unexcusedAbsences}`);
       lines.push("");
-      lines.push("  You have exceeded 3 absences.");
+      lines.push("  You have 3 or more UNEXCUSED absences.");
       lines.push("  You are automatically FAILED.");
       lines.push("");
       lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -254,8 +477,9 @@ function calculate() {
       return;
     }
     
-    // Convert attendance count to percentage
-    const attendancePercentage = (attendanceCount / 4) * 100;
+    // Calculate effective attendance (present + excused, capped at total sessions)
+    const effectiveAttendance = Math.min(totalSessions, attendanceCount + excusedAbsences);
+    const attendancePercentage = (effectiveAttendance / totalSessions) * 100;
     
     const lw1 = readDoubleRange($("lw1").value, 0, 100);
     const lw2 = readDoubleRange($("lw2").value, 0, 100);
@@ -271,7 +495,10 @@ function calculate() {
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("  📊 YOUR GRADES");
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    lines.push(`  Total Attendance:  ${attendanceCount}/4`);
+    lines.push(`  Present:            ${attendanceCount}/${totalSessions}`);
+    lines.push(`  Excused Absences:   ${excusedAbsences}`);
+    lines.push(`  Unexcused Absences: ${unexcusedAbsences}`);
+    lines.push(`  Effective Attend.:  ${effectiveAttendance}/${totalSessions}`);
     lines.push(`  Attendance %:      ${fmt(attendancePercentage)}`);
     lines.push(`  Lab Work 1:        ${fmt(lw1)}`);
     lines.push(`  Lab Work 2:        ${fmt(lw2)}`);
