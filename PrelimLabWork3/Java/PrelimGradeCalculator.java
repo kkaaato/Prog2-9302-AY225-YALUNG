@@ -167,8 +167,10 @@ public class PrelimGradeCalculator extends JFrame {
             private boolean isValid(FilterBypass fb, int offset, String string, int length)
                     throws BadLocationException {
                 if (isAttendance) {
-                    // Attendance: only allow digits 0-5
+                    // Attendance: only allow digits 0-5, NO decimals
                     if (!string.matches("[0-9]*")) return false;
+                    // Explicitly block decimal point
+                    if (string.contains(".")) return false;
 
                     String currentText = fb.getDocument().getText(0, fb.getDocument().getLength());
                     String newText = currentText.substring(0, offset) + string +
@@ -186,8 +188,10 @@ public class PrelimGradeCalculator extends JFrame {
                         return false;
                     }
                 } else {
-                    // Lab work: allow digits and decimal point (0-100)
-                    if (!string.matches("[0-9.]*")) return false;
+                    // Lab work: only allow digits (whole numbers 0-100, NO decimals)
+                    if (!string.matches("[0-9]*")) return false;
+                    // Explicitly block decimal point
+                    if (string.contains(".")) return false;
 
                     String currentText = fb.getDocument().getText(0, fb.getDocument().getLength());
                     String newText = currentText.substring(0, offset) + string +
@@ -195,33 +199,14 @@ public class PrelimGradeCalculator extends JFrame {
 
                     if (newText.isEmpty()) return true;
 
-                    // Prevent multiple leading zeros (like "000")
-                    if (newText.matches("^0+[0-9]")) return false;
-
-                    // Allow single zero or "0." but not multiple zeros
-                    if (newText.equals("0") || newText.equals("0.")) return true;
-
-                    // Prevent leading zeros before other numbers
-                    if (newText.matches("^0[0-9]+")) return false;
+                    // Prevent leading zeros like "00", "01"
+                    if (newText.matches("^0[0-9]")) return false;
 
                     try {
-                        if (newText.chars().filter(ch -> ch == '.').count() > 1) return false;
-
-                        if (newText.contains(".")) {
-                            String[] parts = newText.split("\\.");
-                            if (parts.length > 1 && parts[1].length() > 2) return false;
-                        }
-
-                        if (newText.endsWith(".")) {
-                            if (newText.length() == 1) return true;
-                            double baseValue = Double.parseDouble(newText.substring(0, newText.length() - 1));
-                            return baseValue >= 0 && baseValue <= 100;
-                        }
-
-                        double value = Double.parseDouble(newText);
+                        int value = Integer.parseInt(newText);
                         return value >= 0 && value <= 100;
                     } catch (NumberFormatException e) {
-                        return newText.matches("^[0-9]{0,3}\\.?[0-9]{0,2}$");
+                        return false;
                     }
                 }
             }
@@ -306,9 +291,9 @@ public class PrelimGradeCalculator extends JFrame {
                 }
             }
 
-            // 3) Compute unexcused and check auto-fail rule (3+ unexcused absences)
+            // 3) Compute unexcused and check auto-fail rule (4+ unexcused absences)
             int unexcusedAbsences = Math.max(0, totalSessions - attendanceCount - excusedAbsences);
-            if (unexcusedAbsences >= 3) {
+            if (unexcusedAbsences >= 4) {
                 StringBuilder result = new StringBuilder();
                 result.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
                 result.append("  ❌ AUTOMATIC FAILURE\n");
@@ -316,7 +301,7 @@ public class PrelimGradeCalculator extends JFrame {
                 result.append(String.format("  Present:            %d/%d\n", attendanceCount, totalSessions));
                 result.append(String.format("  Excused Absences:   %d\n", excusedAbsences));
                 result.append(String.format("  Unexcused Absences: %d\n\n", unexcusedAbsences));
-                result.append("  You have 3 or more UNEXCUSED absences.\n");
+                result.append("  You have 4 or more UNEXCUSED absences.\n");
                 result.append("  You are automatically FAILED.\n\n");
                 result.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
                 resultArea.setText(result.toString());
@@ -415,19 +400,22 @@ public class PrelimGradeCalculator extends JFrame {
             throw new IllegalArgumentException(fieldName + " cannot be empty!");
         }
         try {
-            double value = Double.parseDouble(input.trim());
             if ("Attendance".equals(fieldName)) {
+                double value = Double.parseDouble(input.trim());
                 if (value < 0 || value > 5) {
                     throw new IllegalArgumentException(fieldName + " must be between 0 and 5!");
                 }
+                return value;
             } else {
+                // Lab work: must be whole numbers
+                int value = Integer.parseInt(input.trim());
                 if (value < 0 || value > 100) {
                     throw new IllegalArgumentException(fieldName + " must be between 0 and 100!");
                 }
+                return value;
             }
-            return value;
         } catch (NumberFormatException e) {
-            throw new IllegalArgumentException(fieldName + " must be a valid number!");
+            throw new IllegalArgumentException(fieldName + " must be a valid whole number!");
         }
     }
 

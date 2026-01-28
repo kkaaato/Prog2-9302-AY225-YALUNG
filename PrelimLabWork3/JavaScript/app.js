@@ -204,7 +204,7 @@ function attachNumberGuards(ids) {
     const el = $(id);
     const isAttendance = id === 'attendance';
     const isExcused = id === 'excused';
-    const maxValue = (isAttendance || isExcused) ? 4 : 100;
+    const maxValue = (isAttendance || isExcused) ? 5 : 100;
     const minValue = 0;
     const allowDecimal = !isAttendance && !isExcused;
 
@@ -216,15 +216,9 @@ function attachNumberGuards(ids) {
       const data = e.data;
       if (data == null) return;
 
-      // Allow digits only for attendance, digits and dot for lab work
-      const allowedPattern = allowDecimal ? /[0-9.]/ : /[0-9]/;
+      // Allow digits only for attendance, digits only for lab work (no decimals)
+      const allowedPattern = /[0-9]/;
       if (!allowedPattern.test(data)) {
-        e.preventDefault();
-        return;
-      }
-
-      // Only one dot allowed (for lab work only)
-      if (allowDecimal && data === '.' && el.value.includes('.')) {
         e.preventDefault();
         return;
       }
@@ -234,50 +228,20 @@ function attachNumberGuards(ids) {
       const selEnd   = el.selectionEnd ?? el.value.length;
       const next = el.value.slice(0, selStart) + data + el.value.slice(selEnd);
 
-      // For lab work: reject leading zeros like "00", "01" (except "0." case)
-      if (allowDecimal && /^0[0-9]/.test(next) && !/^0\./.test(next)) {
+      // Reject leading zeros like "00", "01"
+      if (/^0[0-9]/.test(next)) {
         e.preventDefault();
         return;
       }
 
-      // For attendance and excused, no decimal allowed
-      if (!allowDecimal && data === '.') {
-        e.preventDefault();
-        return;
-      }
-
-      // For attendance and excused: reject leading zeros
-      if ((isAttendance || isExcused) && /^0[0-9]/.test(next)) {
-        e.preventDefault();
-        return;
-      }
-
-      // If it's only a dot or starts with dot (lab work only), normalize to "0."
-      if (allowDecimal && (next === '.' || next === '.0')) {
-        return;
-      }
-
-      // Check numeric and within range
-      if (allowDecimal) {
-        if (/^\d*\.?\d*$/.test(next)) {
-          const num = Number(next);
-          const endsWithDot = next.endsWith('.');
-          if (!Number.isNaN(num) && !endsWithDot) {
-            if (num < 0 || num > maxValue) {
-              e.preventDefault();
-            }
-          }
-        } else {
+      // Check numeric and within range (all fields are integers now)
+      if (/^\d+$/.test(next)) {
+        const num = Number(next);
+        if (num < 0 || num > maxValue) {
           e.preventDefault();
         }
       } else {
-        // Attendance and Excused: integers only
-        if (/^\d+$/.test(next)) {
-          const num = Number(next);
-          if (num < 0 || num > maxValue) {
-            e.preventDefault();
-          }
-        }
+        e.preventDefault();
       }
     });
 
@@ -285,56 +249,35 @@ function attachNumberGuards(ids) {
     el.addEventListener('input', () => {
       let v = el.value;
 
-      if (allowDecimal) {
-        // For lab work
-        if (v.startsWith('.')) v = '0' + v;
-        const parts = v.replace(/[^0-9.]/g, '').split('.');
-        v = parts.shift() + (parts.length ? '.' + parts.join('') : '');
-
-        if (/^0[0-9]/.test(v) && !/^0\./.test(v)) {
+      // All fields are now integers only (no decimals)
+      v = v.replace(/[^0-9]/g, '');
+      if (v === '') {
+        // Allow empty for now
+      } else {
+        // Reject leading zeros like "00", "01"
+        if (/^0[0-9]/.test(v)) {
           v = v.replace(/^0+/, '');
           if (v === '') v = '0';
         }
 
-        if (v !== '' && !v.endsWith('.')) {
-          const num = Number(v);
-          if (Number.isFinite(num)) {
-            if (num < 0) v = '0';
-            if (num > 100) v = '100';
-          }
-        }
+        const num = Number(v);
+        if (num < 0) v = '0';
+        if (num > maxValue) v = String(maxValue);
+      }
+      el.value = v;
 
-        el.value = v;
-        if (v === '' || v === '.' || v === '0.') {
-          el.setCustomValidity('Please enter a number from 0 to 100.');
-        } else {
-          const num = Number(v);
-          if (!Number.isFinite(num) || num < 0 || num > 100) {
-            el.setCustomValidity('Please enter a number from 0 to 100.');
-          } else {
-            el.setCustomValidity('');
-          }
-        }
-      } else {
-        // Attendance and Excused: integers only 0-5
-        v = v.replace(/[^0-9]/g, '');
-        if (v === '') {
-          // Allow empty for now
-        } else {
-          const num = Number(v);
-          if (num < 0) v = '0';
-          if (num > 5) v = '5';
-        }
-        el.value = v;
-        if (v === '') {
+      if (v === '') {
+        if (isAttendance || isExcused) {
           el.setCustomValidity(`Please enter ${isExcused ? 'excused absences' : 'total attendance'} (0-5).`);
         } else {
-          const num = Number(v);
-          if (!Number.isFinite(num) || num < 0 || num > 5) {
-            el.setCustomValidity('Please enter a number from 0 to 5.');
-          } else {
-            el.setCustomValidity('');
-          }
+          el.setCustomValidity('Please enter a number from 0 to 100.');
+        }
+      } else {
+        const num = Number(v);
+        if (!Number.isFinite(num) || num < 0 || num > maxValue) {
+          el.setCustomValidity(`Please enter a number from 0 to ${maxValue}.`);
+        } else {
+          el.setCustomValidity('');
         }
       }
     });
@@ -457,8 +400,8 @@ function performCalculation(attendanceCount, excusedAbsences) {
     // Calculate unexcused absences
     const unexcusedAbsences = Math.max(0, totalSessions - attendanceCount - excusedAbsences);
 
-    // Auto-fail rule: 3 or more unexcused absences
-    if (unexcusedAbsences >= 3) {
+    // Auto-fail rule: 4 or more unexcused absences
+    if (unexcusedAbsences >= 4) {
       const lines = [];
       lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       lines.push("  ❌ AUTOMATIC FAILURE");
@@ -468,7 +411,7 @@ function performCalculation(attendanceCount, excusedAbsences) {
       lines.push(`  Excused Absences:   ${excusedAbsences}`);
       lines.push(`  Unexcused Absences: ${unexcusedAbsences}`);
       lines.push("");
-      lines.push("  You have 3 or more UNEXCUSED absences.");
+      lines.push("  You have 4 or more UNEXCUSED absences.");
       lines.push("  You are automatically FAILED.");
       lines.push("");
       lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
