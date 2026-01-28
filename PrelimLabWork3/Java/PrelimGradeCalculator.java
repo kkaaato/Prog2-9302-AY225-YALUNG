@@ -48,7 +48,7 @@ public class PrelimGradeCalculator extends JFrame {
             BorderFactory.createEmptyBorder(12, 12, 12, 12)
         ));
         
-        JLabel noteLabel = new JLabel("📝 Attendance (1-4), Lab Work (0-100)");
+        JLabel noteLabel = new JLabel("📝 Attendance (0-4), Lab Work (0-100)");
         noteLabel.setFont(new Font("Arial", Font.BOLD, 12));
         noteLabel.setForeground(neonPurple);
         
@@ -144,7 +144,7 @@ public class PrelimGradeCalculator extends JFrame {
         
         // Restrict input to numbers only (0-4 for attendance, 0-100 for lab work)
         final int maxValue = isAttendance ? 4 : 100;
-        final int minValue = isAttendance ? 1 : 0;
+        final int minValue = isAttendance ? 0 : 0;
         ((AbstractDocument) textField.getDocument()).setDocumentFilter(new DocumentFilter() {
             @Override
             public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr) 
@@ -189,7 +189,7 @@ public class PrelimGradeCalculator extends JFrame {
                     
                     try {
                         int value = Integer.parseInt(newText);
-                        return value >= 1 && value <= 4;
+                        return value >= 0 && value <= 4;
                     } catch (NumberFormatException e) {
                         return false;
                     }
@@ -354,36 +354,59 @@ public class PrelimGradeCalculator extends JFrame {
             result.append("  🎯 REQUIRED PRELIM EXAM SCORES\n");
             result.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n");
             
-            // For Passing
-            result.append("  To PASS (75):\n");
-            if (requiredExamToPass <= 0) {
-                result.append("    ✅ Already Passing!\n");
-            } else if (requiredExamToPass > 100) {
-                result.append("    ❌ grade not achievable\n");
+            // Check if both grades are not achievable
+            if (requiredExamToPass > 100 && requiredExamForExcellent > 100) {
+                result.append("  ❌ GOAL NOT ACHIEVABLE\n\n");
+                result.append("  Your current grades are too low to achieve\n");
+                result.append("  a passing or excellent score, even with a\n");
+                result.append("  perfect exam.\n\n");
+                result.append("  💪 Don't give up! Try again next year\n");
+                result.append("  with better preparation.\n");
             } else {
-                result.append(String.format("    📝 Need: %s\n", df.format(requiredExamToPass)));
-            }
-            
-            result.append("\n");
-            
-            // For Excellent
-            result.append("  For EXCELLENT (100):\n");
-            if (requiredExamForExcellent <= 0) {
-                result.append("    ⭐ Already Excellent!\n");
-            } else if (requiredExamForExcellent > 100) {
-                result.append("    ❌ grade not achievable\n");
-            } else {
-                result.append(String.format("    📝 Need: %s\n", df.format(requiredExamForExcellent)));
+                // For Passing
+                result.append("  To PASS (75):\n");
+                if (requiredExamToPass <= 0) {
+                    result.append("    ✅ Already Passing!\n");
+                } else if (requiredExamToPass > 100) {
+                    result.append("    ❌ Score not achievable\n");
+                } else {
+                    result.append(String.format("    📝 Need: %s %s\n", df.format(requiredExamToPass), 
+                        getDifficultyAssessment(requiredExamToPass)));
+                }
+                
+                result.append("\n");
+                
+                // For Excellent
+                result.append("  For EXCELLENT (100):\n");
+                if (requiredExamForExcellent <= 0) {
+                    result.append("    ⭐ Already Excellent!\n");
+                } else if (requiredExamForExcellent > 100) {
+                    result.append("    ❌ Score not achievable\n");
+                } else {
+                    result.append(String.format("    📝 Need: %s %s\n", df.format(requiredExamForExcellent), 
+                        getDifficultyAssessment(requiredExamForExcellent)));
+                }
             }
             
             result.append("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-            result.append("🍀 Goodluck With The Exam!🍀 \n");
             
             resultArea.setText(result.toString());
             
         } catch (IllegalArgumentException e) {
             JOptionPane.showMessageDialog(this, e.getMessage(), 
                 "❌ Input Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+    
+    private String getDifficultyAssessment(double requiredScore) {
+        if (requiredScore <= 30) {
+            return "✅ (Very Achievable!)";
+        } else if (requiredScore <= 50) {
+            return "✅ (Achievable)";
+        } else if (requiredScore <= 75) {
+            return "⚠️ (Moderate Difficulty)";
+        } else {
+            return "❌ (Very Challenging)";
         }
     }
     
@@ -396,8 +419,8 @@ public class PrelimGradeCalculator extends JFrame {
             double value = Double.parseDouble(input.trim());
             
             if ("Attendance".equals(fieldName)) {
-                if (value < 1 || value > 4) {
-                    throw new IllegalArgumentException(fieldName + " must be between 1 and 4!");
+                if (value < 0 || value > 4) {
+                    throw new IllegalArgumentException(fieldName + " must be between 0 and 4!");
                 }
             } else {
                 if (value < 0 || value > 100) {

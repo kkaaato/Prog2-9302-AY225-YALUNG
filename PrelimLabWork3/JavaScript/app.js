@@ -91,7 +91,7 @@ function attachNumberGuards(ids) {
         // Attendance: integers only
         if (/^\d+$/.test(next)) {
           const num = Number(next);
-          if (num < 1 || num > maxValue) {
+          if (num < 0 || num > maxValue) {
             e.preventDefault();
           }
         }
@@ -133,22 +133,22 @@ function attachNumberGuards(ids) {
           }
         }
       } else {
-        // Attendance: integers only 1-4
+        // Attendance: integers only 0-4
         v = v.replace(/[^0-9]/g, '');
         if (v === '') {
           // Allow empty for now
         } else {
           const num = Number(v);
-          if (num < 1) v = '1';
+          if (num < 0) v = '0';
           if (num > 4) v = '4';
         }
         el.value = v;
         if (v === '') {
-          el.setCustomValidity('Please enter total attendance (1-4).');
+          el.setCustomValidity('Please enter total attendance (0-4).');
         } else {
           const num = Number(v);
-          if (!Number.isFinite(num) || num < 1 || num > 4) {
-            el.setCustomValidity('Please enter a number from 1 to 4.');
+          if (!Number.isFinite(num) || num < 0 || num > 4) {
+            el.setCustomValidity('Please enter a number from 0 to 4.');
           } else {
             el.setCustomValidity('');
           }
@@ -207,9 +207,22 @@ function buildRequirement(required, label) {
   } else if (required > 100) {
     lines.push(`    ❌ Not Achievable`);
   } else {
-    lines.push(`    📝 Need: ${fmt(required)}`);
+    const difficulty = getDifficultyAssessment(required);
+    lines.push(`    📝 Need: ${fmt(required)} ${difficulty}`);
   }
   return lines.join("\n");
+}
+
+function getDifficultyAssessment(requiredScore) {
+  if (requiredScore <= 30) {
+    return "✅ (Very Achievable!)";
+  } else if (requiredScore <= 50) {
+    return "✅ (Achievable)";
+  } else if (requiredScore <= 75) {
+    return "⚠️ (Moderate Difficulty)";
+  } else {
+    return "❌ (Very Challenging)";
+  }
 }
 
 /* UI handlers */
@@ -270,12 +283,24 @@ function calculate() {
     lines.push("  🎯 REQUIRED PRELIM EXAM SCORES");
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     lines.push("");
-    lines.push(buildRequirement(needPass, "To PASS (75):"));
+    
+    // Check if both grades are not achievable
+    if (needPass > 100 && needExcellent > 100) {
+      lines.push("  ❌ GOAL NOT ACHIEVABLE");
+      lines.push("");
+      lines.push("  Your current grades are too low to achieve");
+      lines.push("  a passing or excellent score, even with a");
+      lines.push("  perfect exam.");
+      lines.push("");
+      lines.push("  💪 Don't give up! Try again next year");
+      lines.push("  with better preparation.");
+    } else {
+      lines.push(buildRequirement(needPass, "To PASS (75):"));
+      lines.push("");
+      lines.push(buildRequirement(needExcellent, "For EXCELLENT (100):"));
+    }
+    
     lines.push("");
-    lines.push(buildRequirement(needExcellent, "For EXCELLENT (100):"));
-    lines.push("");
-    lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-    lines.push("🍀Good lcuk on your prelim examls!🍀");
     lines.push("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     out.textContent = lines.join("\n");
