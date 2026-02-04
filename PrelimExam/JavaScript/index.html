@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Records - Kurt Michael D. Yalung 21-1174-522</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --neon-purple: #8A2BE2;
+      --neon-pink: #FF1493;
+      --neon-cyan: #00B7EB;
+      --neon-green: #39FF14;
+      --maroon: #800000;
+      --light-bg: #F5F5FA;
+      --white-bg: #FFFFFF;
+      --text-main: #1A1A1A;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: var(--sans);
+      color: var(--text-main);
+      background:
+        radial-gradient(1200px 800px at 10% -10%, rgba(255,20,147,0.05), transparent 60%),
+        radial-gradient(900px 600px at 110% 10%, rgba(138,43,226,0.07), transparent 60%),
+        var(--light-bg);
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      gap: 18px;
+    }
+    .title {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--light-bg);
+      border: 3px solid var(--maroon);
+      border-radius: 14px;
+      padding: 16px;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 1.5rem;
+      color: var(--neon-pink);
+      letter-spacing: 0.4px;
+      text-align: center;
+    }
+    .panel {
+      background: var(--white-bg);
+      border: 3px solid var(--maroon);
+      border-radius: 14px;
+      padding: 18px;
+    }
+    .note {
+      color: var(--neon-purple);
+      font-weight: 700;
+      margin-bottom: 12px;
+      font-size: 1rem;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+    label {
+      display: block;
+      color: var(--neon-cyan);
+      font-weight: 700;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+    }
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 2px solid var(--maroon);
+      font-size: 0.95rem;
+      color: var(--neon-purple);
+      background: #fff;
+      outline: none;
+      transition: box-shadow .2s ease, border-color .2s ease;
+    }
+    input:focus, select:focus {
+      border-color: var(--neon-pink);
+      box-shadow: 0 0 0 3px rgba(255,20,147,0.15);
+    }
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .btn {
+      border: none;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: .2px;
+      padding: 11px 26px;
+      border-radius: 25px;
+      cursor: pointer;
+      transition: transform .06s ease, filter .15s ease;
+      font-size: 0.9rem;
+    }
+    .btn:active { transform: translateY(1px) scale(0.995); }
+    .btn-add { background: var(--neon-green); }
+    .btn-add:hover { filter: brightness(1.1); }
+    .table-container {
+      background: var(--white-bg);
+      border: 3px solid var(--maroon);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .table-header {
+      padding: 12px 16px;
+      background: linear-gradient(90deg, rgba(138,43,226,0.12), rgba(0,183,235,0.12));
+      border-bottom: 2px solid rgba(0,0,0,0.06);
+      font-weight: 800;
+      color: var(--neon-purple);
+      font-size: 1.05rem;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: var(--mono);
+      font-size: 0.85rem;
+    }
+    thead {
+      position: sticky;
+      top: 0;
+      background: var(--light-bg);
+      z-index: 10;
+    }
+    th {
+      padding: 12px 10px;
+      text-align: left;
+      color: var(--neon-purple);
+      font-weight: 700;
+      border-bottom: 2px solid var(--maroon);
+      white-space: nowrap;
+    }
+    td {
+      padding: 10px;
+      color: var(--neon-cyan);
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    tbody tr { transition: background-color .15s ease; }
+    tbody tr:hover { background: rgba(138,43,226,0.04); }
+    .btn-delete {
+      background: var(--neon-pink);
+      color: white;
+      border: none;
+      padding: 6px 14px;
+      border-radius: 15px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 0.8rem;
+      transition: filter .15s ease;
+    }
+    .btn-delete:hover { filter: brightness(1.15); }
+    .footer {
+      text-align: center;
+      color: #555;
+      font-size: 0.9rem;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="title">
+      <h1>📚 STUDENT RECORDS SYSTEM - KURT MICHAEL D. YALUNG 21-1174-522</h1>
+    </div>
+
+    <!-- Add New Student -->
+    <section class="panel">
+      <div class="note">📝 Add New Student Record</div>
+      <form id="studentForm">
+        <div class="input-grid">
+          <div>
+            <label for="studentId">Student ID</label>
+            <input type="text" id="studentId" required placeholder="e.g., 201952322" />
+          </div>
+          <div>
+            <label for="firstName">First Name</label>
+            <input type="text" id="firstName" required placeholder="e.g., Joe" />
+          </div>
+          <div>
+            <label for="lastName">Last Name</label>
+            <input type="text" id="lastName" required placeholder="e.g., Bow" />
+          </div>
+          <div>
+            <label for="lab1">Lab Work 1</label>
+            <input type="number" id="lab1" class="grade" min="0" max="100" step="1" inputmode="numeric" required placeholder="0-100" />
+          </div>
+          <div>
+            <label for="lab2">Lab Work 2</label>
+            <input type="number" id="lab2" class="grade" min="0" max="100" step="1" inputmode="numeric" required placeholder="0-100" />
+          </div>
+          <div>
+            <label for "lab3">Lab Work 3</label>
+            <input type="number" id="lab3" class="grade" min="0" max="100" step="1" inputmode="numeric" required placeholder="0-100" />
+          </div>
+          <div>
+            <label for="prelim">Prelim Exam</label>
+            <input type="number" id="prelim" class="grade" min="0" max="100" step="1" inputmode="numeric" required placeholder="0-100" />
+          </div>
+          <div>
+            <label for="attendance">Attendance</label>
+            <input type="number" id="attendance" class="grade" min="0" max="100" step="1" inputmode="numeric" required placeholder="0-100" />
+          </div>
+        </div>
+        <div class="btn-row">
+          <button type="submit" class="btn btn-add">ADD STUDENT</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- 🔎 Search Panel -->
+    <section class="panel" id="searchPanel">
+      <div class="note">🔎 Search Student Records</div>
+      <div class="input-grid" style="grid-template-columns: 1.5fr 1fr 1fr auto auto;">
+        <div>
+          <label for="searchQuery">Search Text</label>
+          <input type="text" id="searchQuery" placeholder="Enter Student ID / First Name / Last Name" />
+        </div>
+        <div>
+          <label for="searchField">Search By</label>
+          <select id="searchField">
+            <option value="studentId">Student ID</option>
+            <option value="firstName">First Name</option>
+            <option value="lastName">Last Name</option>
+          </select>
+        </div>
+        <div>
+          <label for="matchType">Match</label>
+          <select id="matchType">
+            <option value="contains">Contains</option>
+            <option value="starts">Starts with</option>
+            <option value="exact">Exact</option>
+          </select>
+        </div>
+        <div class="btn-row" style="align-items: end; gap:10px;">
+          <button type="button" class="btn" id="btnSearch" style="background: var(--neon-cyan);">SEARCH</button>
+          <button type="button" class="btn" id="btnReset"  style="background: var(--neon-purple);">RESET</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Table -->
+    <section class="table-container">
+      <div class="table-header">📊 Student Records (Total: <span id="recordCount">0</span>)</div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>First Name</th>
+              <th>Last Name</th>
+              <th>Lab 1</th>
+              <th>Lab 2</th>
+              <th>Lab 3</th>
+              <th>Prelim</th>
+              <th>Attendance</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <!-- Rows dynamically generated here -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <div class="footer">
+      Student Records Management System © 2026 <br />
+      Kurt Michael D. Yalung
+    </div>
+  </div>
+
+  <!-- ✅ Correct file name -->
+  <script src="app.js"></script>
+</body>
+</html>
