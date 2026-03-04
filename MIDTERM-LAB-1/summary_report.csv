@@ -1,0 +1,43 @@
+Section,Metric,Value
+Overview,Total Records,64016
+Overview,Total Global Sales (millions),6605.91
+Overview,Average Critic Score,7.22
+Overview,Top Publisher,Activision
+Overview,Top Publisher Sales (millions),722.77
+Overview,Top Console,PS2
+Overview,Top Console Sales (millions),1027.76
+
+Top 5 Games,Rank,Title,Console,Total Sales (millions)
+Top 5 Games,1,Grand Theft Auto V,PS3,20.32
+Top 5 Games,2,Grand Theft Auto V,PS4,19.39
+Top 5 Games,3,Grand Theft Auto: Vice City,PS2,16.15
+Top 5 Games,4,Grand Theft Auto V,X360,15.86
+Top 5 Games,5,Call of Duty: Black Ops 3,PS4,15.09
+
+Genre Sales,Genre,Total Sales (millions)
+Genre Sales,Sports,1187.51
+Genre Sales,Action,1125.89
+Genre Sales,Shooter,995.50
+Genre Sales,Misc,557.79
+Genre Sales,Racing,525.75
+Genre Sales,Role-Playing,426.80
+Genre Sales,Platform,349.15
+Genre Sales,Fighting,341.13
+Genre Sales,Adventure,325.39
+Genre Sales,Simulation,300.65
+Genre Sales,Action-Adventure,148.52
+Genre Sales,Puzzle,127.28
+Genre Sales,Strategy,118.31
+Genre Sales,Music,51.75
+Genre Sales,MMO,9.31
+Genre Sales,Party,6.21
+Genre Sales,Visual Novel,5.78
+Genre Sales,Sandbox,1.89
+Genre Sales,Education,0.97
+Genre Sales,Board Game,0.33
+
+Regional Sales,Region,Total Sales (millions)
+Regional Sales,North America,3345.52
+Regional Sales,Japan,687.94
+Regional Sales,PAL Region,1916.83
+Regional Sales,Other,651.12
