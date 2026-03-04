@@ -60,6 +60,7 @@ public class VideoGameAnalytics {
             }
         } catch (IOException e) {
             System.out.println("Error reading file: " + e.getMessage());
+            input.close();
             return;
         }
 
@@ -241,6 +242,8 @@ public class VideoGameAnalytics {
         } catch (IOException e) {
             System.out.println("Error writing CSV: " + e.getMessage());
         }
+
+        input.close();
     }
 
     // ──────────────────────────────────────────
