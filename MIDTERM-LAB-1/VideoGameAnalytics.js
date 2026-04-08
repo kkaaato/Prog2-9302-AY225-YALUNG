@@ -10,6 +10,13 @@ const rl = readline.createInterface({
     output: process.stdout
 });
 
+// Expected header columns for the vgchartz-2024 dataset
+const EXPECTED_HEADERS = [
+    'img', 'title', 'console', 'genre', 'publisher', 'developer',
+    'critic_score', 'total_sales', 'na_sales', 'jp_sales', 'pal_sales',
+    'other_sales', 'release_date', 'last_update'
+];
+
 // ──────────────────────────────────────────
 // HELPER: Parse a CSV line (handles quoted fields)
 // ──────────────────────────────────────────
@@ -64,6 +71,17 @@ function truncate(s, maxLen) {
 }
 
 // ──────────────────────────────────────────
+// HELPER: Validate vgchartz header
+// ──────────────────────────────────────────
+function isValidVGChartzHeader(cols) {
+    if (cols.length < EXPECTED_HEADERS.length) return false;
+    for (let i = 0; i < EXPECTED_HEADERS.length; i++) {
+        if (cols[i].trim().toLowerCase() !== EXPECTED_HEADERS[i]) return false;
+    }
+    return true;
+}
+
+// ──────────────────────────────────────────
 // MAIN: Ask for file path (loop until valid)
 // ──────────────────────────────────────────
 function askFilePath() {
@@ -82,27 +100,54 @@ function askFilePath() {
 
 function askQuestion() {
     rl.question("Enter dataset file path: ", function (path) {
-        if (fs.existsSync(path)) {
-            console.log("File found. Processing...\n");
-            rl.close();
-            processFile(path);
-        } else {
-            console.log("Invalid file path. Try again.");
-            askQuestion();
+        path = path.trim();
+
+        // Check file exists
+        if (!fs.existsSync(path)) {
+            console.log("File not found. Please try again.");
+            return askQuestion();
         }
+
+        // Check file is readable
+        let content;
+        try {
+            content = fs.readFileSync(path, 'utf8');
+        } catch (e) {
+            console.log("File is not readable: " + e.message);
+            return askQuestion();
+        }
+
+        const lines = content.split('\n').filter(l => l.trim() !== '');
+
+        // Check valid CSV
+        if (!lines[0] || !lines[0].includes(',')) {
+            console.log("File does not appear to be a valid CSV. Please try again.");
+            return askQuestion();
+        }
+
+        // Check correct dataset headers
+        const cols = parseCSVLine(lines[0]);
+        if (!isValidVGChartzHeader(cols)) {
+            console.log("This does not appear to be the vgchartz-2024 dataset. Please try again.");
+            return askQuestion();
+        }
+
+        // Check dataset is not empty
+        if (lines.length < 2) {
+            console.log("The dataset is empty. Please provide a valid file.");
+            return askQuestion();
+        }
+
+        console.log("File found. Processing...\n");
+        rl.close();
+        processFile(lines);
     });
 }
 
 // ──────────────────────────────────────────
 // PROCESS: Load, analyze, display, export
 // ──────────────────────────────────────────
-function processFile(filePath) {
-    const lines = fs.readFileSync(filePath, 'utf8').split('\n');
-
-    // Column indices
-    // img,title,console,genre,publisher,developer,
-    // critic_score,total_sales,na_sales,jp_sales,pal_sales,other_sales,
-    // release_date,last_update
+function processFile(lines) {
     const IDX_TITLE       = 1;
     const IDX_CONSOLE     = 2;
     const IDX_GENRE       = 3;
@@ -120,10 +165,22 @@ function processFile(filePath) {
     for (let i = 1; i < lines.length; i++) {
         if (lines[i].trim() === '') continue;
         const row = parseCSVLine(lines[i]);
-        if (row.length === headers.length) records.push(row);
+        if (row.length === headers.length) {
+            try {
+                records.push(row);
+            } catch (e) {
+                // Skip malformed rows
+            }
+        }
     }
 
     console.log(`Total records loaded: ${records.length}`);
+
+    // Guard: stop if no valid records
+    if (records.length === 0) {
+        console.log("No valid records found in the dataset. Exiting.");
+        return;
+    }
 
     // --- Total global sales ---
     let totalGlobalSales = 0;
@@ -148,7 +205,7 @@ function processFile(filePath) {
         const pub = row[IDX_PUBLISHER] || 'Unknown';
         salesByPublisher[pub] = (salesByPublisher[pub] || 0) + parseFloat2(row[IDX_TOTAL_SALES]);
     }
-    const topPublisher = Object.entries(salesByPublisher).sort((a, b) => b[1] - a[1])[0];
+    const topPublisher = Object.entries(salesByPublisher).sort((a, b) => b[1] - a[1])[0] || ['N/A', 0];
 
     // --- Average critic score ---
     let totalScore = 0, scoreCount = 0;
@@ -173,7 +230,7 @@ function processFile(filePath) {
         const console_ = row[IDX_CONSOLE] || 'Unknown';
         salesByConsole[console_] = (salesByConsole[console_] || 0) + parseFloat2(row[IDX_TOTAL_SALES]);
     }
-    const topConsole = Object.entries(salesByConsole).sort((a, b) => b[1] - a[1])[0];
+    const topConsole = Object.entries(salesByConsole).sort((a, b) => b[1] - a[1])[0] || ['N/A', 0];
 
     // ──────────────────────────────────────────
     // Display Results
@@ -219,7 +276,6 @@ function processFile(filePath) {
     // ──────────────────────────────────────────
     let csv = '';
 
-    // Section 1: Overview
     csv += 'Section,Metric,Value\n';
     csv += `Overview,Total Records,${records.length}\n`;
     csv += `Overview,Total Global Sales (millions),${totalGlobalSales.toFixed(2)}\n`;
@@ -229,34 +285,30 @@ function processFile(filePath) {
     csv += `Overview,Top Console,${topConsole[0]}\n`;
     csv += `Overview,Top Console Sales (millions),${topConsole[1].toFixed(2)}\n\n`;
 
-    // Section 2: Top 5 Games
     csv += 'Top 5 Games,Rank,Title,Console,Total Sales (millions)\n';
     top5.forEach((row, i) => {
         csv += `Top 5 Games,${i + 1},${escapeCSV(row[IDX_TITLE])},${escapeCSV(row[IDX_CONSOLE])},${parseFloat2(row[IDX_TOTAL_SALES]).toFixed(2)}\n`;
     });
     csv += '\n';
 
-    // Section 3: Genre Sales
     csv += 'Genre Sales,Genre,Total Sales (millions)\n';
     genreList.forEach(([genre, sales]) => {
         csv += `Genre Sales,${escapeCSV(genre)},${sales.toFixed(2)}\n`;
     });
     csv += '\n';
 
-    // Section 4: Regional Sales
     csv += 'Regional Sales,Region,Total Sales (millions)\n';
     csv += `Regional Sales,North America,${totalNA.toFixed(2)}\n`;
     csv += `Regional Sales,Japan,${totalJP.toFixed(2)}\n`;
     csv += `Regional Sales,PAL Region,${totalPAL.toFixed(2)}\n`;
     csv += `Regional Sales,Other,${totalOther.toFixed(2)}\n`;
 
-    fs.writeFile('summary_report.csv', csv, (err) => {
-        if (err) {
-            console.log("Error writing CSV: " + err.message);
-        } else {
-            console.log("\nSummary report exported to: summary_report.csv");
-        }
-    });
+    try {
+        fs.writeFileSync('summary_report.csv', csv);
+        console.log("\nSummary report exported to: summary_report.csv");
+    } catch (err) {
+        console.log("Error writing CSV: " + err.message);
+    }
 }
 
 askFilePath();

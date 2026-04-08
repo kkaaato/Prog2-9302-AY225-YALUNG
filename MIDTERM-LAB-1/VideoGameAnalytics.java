@@ -7,6 +7,13 @@ import java.util.*;
 
 public class VideoGameAnalytics {
 
+    // Expected header columns for the vgchartz-2024 dataset
+    private static final String[] EXPECTED_HEADERS = {
+        "img", "title", "console", "genre", "publisher", "developer",
+        "critic_score", "total_sales", "na_sales", "jp_sales", "pal_sales",
+        "other_sales", "release_date", "last_update"
+    };
+
     public static void main(String[] args) {
         // ──────────────────────────────────────────
         // STEP 1: Prompt user for dataset file path
@@ -29,16 +36,27 @@ public class VideoGameAnalytics {
             String path = input.nextLine().trim();
             file = new File(path);
 
+            // Check file exists
             if (!file.exists() || !file.isFile()) {
                 System.out.println("File not found. Please try again.");
                 continue;
             }
 
-            // Validate CSV format by checking the header line
+            // Check file is readable, valid CSV, correct dataset, and not empty
             try (BufferedReader br = new BufferedReader(new FileReader(file))) {
                 String header = br.readLine();
                 if (header == null || !header.contains(",")) {
                     System.out.println("File does not appear to be a valid CSV. Please try again.");
+                    continue;
+                }
+                String[] cols = parseCSVLine(header);
+                if (!isValidVGChartzHeader(cols)) {
+                    System.out.println("This does not appear to be the vgchartz-2024 dataset. Please try again.");
+                    continue;
+                }
+                String firstRow = br.readLine();
+                if (firstRow == null || firstRow.trim().isEmpty()) {
+                    System.out.println("The dataset is empty. Please provide a valid file.");
                     continue;
                 }
             } catch (IOException e) {
@@ -68,7 +86,11 @@ public class VideoGameAnalytics {
                 }
                 String[] row = parseCSVLine(line);
                 if (row.length == headers.length) {
-                    records.add(new DataRecord(row));
+                    try {
+                        records.add(new DataRecord(row));
+                    } catch (ArrayIndexOutOfBoundsException e) {
+                        // Skip malformed rows silently
+                    }
                 }
             }
         } catch (IOException e) {
@@ -78,6 +100,13 @@ public class VideoGameAnalytics {
         }
 
         System.out.println("Total records loaded: " + records.size());
+
+        // Guard: stop if no valid records were loaded
+        if (records.isEmpty()) {
+            System.out.println("No valid records found in the dataset. Exiting.");
+            input.close();
+            return;
+        }
 
         // ──────────────────────────────────────────
         // STEP 3: Perform Analytics
@@ -107,9 +136,13 @@ public class VideoGameAnalytics {
         for (DataRecord r : records) {
             salesByPublisher.merge(r.publisher, r.totalSales, Double::sum);
         }
-        String topPublisher = Collections.max(salesByPublisher.entrySet(),
-                Map.Entry.comparingByValue()).getKey();
-        double topPublisherSales = salesByPublisher.get(topPublisher);
+        String topPublisher = "N/A";
+        double topPublisherSales = 0;
+        if (!salesByPublisher.isEmpty()) {
+            topPublisher = Collections.max(salesByPublisher.entrySet(),
+                    Map.Entry.comparingByValue()).getKey();
+            topPublisherSales = salesByPublisher.get(topPublisher);
+        }
 
         // --- 3e. Average critic score ---
         double totalScore = 0;
@@ -136,9 +169,13 @@ public class VideoGameAnalytics {
         for (DataRecord r : records) {
             salesByConsole.merge(r.console, r.totalSales, Double::sum);
         }
-        String topConsole = Collections.max(salesByConsole.entrySet(),
-                Map.Entry.comparingByValue()).getKey();
-        double topConsoleSales = salesByConsole.get(topConsole);
+        String topConsole = "N/A";
+        double topConsoleSales = 0;
+        if (!salesByConsole.isEmpty()) {
+            topConsole = Collections.max(salesByConsole.entrySet(),
+                    Map.Entry.comparingByValue()).getKey();
+            topConsoleSales = salesByConsole.get(topConsole);
+        }
 
         // ──────────────────────────────────────────
         // STEP 4: Display Formatted Results
@@ -236,6 +273,15 @@ public class VideoGameAnalytics {
     // HELPER METHODS
     // ──────────────────────────────────────────
 
+    /** Check if the CSV header matches the expected vgchartz-2024 columns. */
+    private static boolean isValidVGChartzHeader(String[] cols) {
+        if (cols.length < EXPECTED_HEADERS.length) return false;
+        for (int i = 0; i < EXPECTED_HEADERS.length; i++) {
+            if (!cols[i].trim().equalsIgnoreCase(EXPECTED_HEADERS[i])) return false;
+        }
+        return true;
+    }
+
     private static String truncate(String s, int maxLen) {
         return s.length() <= maxLen ? s : s.substring(0, maxLen - 1) + "…";
     }
@@ -281,7 +327,7 @@ class DataRecord {
     double totalSales, naSales, jpSales, palSales, otherSales, criticScore;
 
     public DataRecord(String[] row) {
-        this.title       = row[1];
+        this.title       = row[1].isEmpty() ? "Unknown" : row[1];
         this.console     = row[2].isEmpty() ? "Unknown" : row[2];
         this.genre       = row[3].isEmpty() ? "Unknown" : row[3];
         this.publisher   = row[4].isEmpty() ? "Unknown" : row[4];
