@@ -29,18 +29,31 @@ public class VideoGameAnalytics {
             String path = input.nextLine().trim();
             file = new File(path);
 
-            if (file.exists() && file.isFile()) {
-                System.out.println("File found. Processing...\n");
-                break;
-            } else {
-                System.out.println("Invalid file path. Please try again.");
+            if (!file.exists() || !file.isFile()) {
+                System.out.println("File not found. Please try again.");
+                continue;
             }
+
+            // Validate CSV format by checking the header line
+            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                String header = br.readLine();
+                if (header == null || !header.contains(",")) {
+                    System.out.println("File does not appear to be a valid CSV. Please try again.");
+                    continue;
+                }
+            } catch (IOException e) {
+                System.out.println("File is not readable: " + e.getMessage());
+                continue;
+            }
+
+            System.out.println("File found. Processing...\n");
+            break;
         }
 
         // ──────────────────────────────────────────
-        // STEP 2: Load dataset into memory
+        // STEP 2: Load dataset into DataRecord list
         // ──────────────────────────────────────────
-        List<String[]> records = new ArrayList<>();
+        List<DataRecord> records = new ArrayList<>();
         String[] headers = null;
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
@@ -55,7 +68,7 @@ public class VideoGameAnalytics {
                 }
                 String[] row = parseCSVLine(line);
                 if (row.length == headers.length) {
-                    records.add(row);
+                    records.add(new DataRecord(row));
                 }
             }
         } catch (IOException e) {
@@ -66,53 +79,33 @@ public class VideoGameAnalytics {
 
         System.out.println("Total records loaded: " + records.size());
 
-        // Column indices (based on vgchartz-2024.csv headers)
-        // img,title,console,genre,publisher,developer,
-        // critic_score,total_sales,na_sales,jp_sales,pal_sales,other_sales,
-        // release_date,last_update
-        final int IDX_TITLE       = 1;
-        final int IDX_CONSOLE     = 2;
-        final int IDX_GENRE       = 3;
-        final int IDX_PUBLISHER   = 4;
-        final int IDX_CRITIC      = 6;
-        final int IDX_TOTAL_SALES = 7;
-        final int IDX_NA_SALES    = 8;
-        final int IDX_JP_SALES    = 9;
-        final int IDX_PAL_SALES   = 10;
-        final int IDX_OTHER_SALES = 11;
-
         // ──────────────────────────────────────────
         // STEP 3: Perform Analytics
         // ──────────────────────────────────────────
 
         // --- 3a. Total global sales ---
         double totalGlobalSales = 0;
-        for (String[] row : records) {
-            totalGlobalSales += parseDouble(row[IDX_TOTAL_SALES]);
+        for (DataRecord r : records) {
+            totalGlobalSales += r.totalSales;
         }
 
         // --- 3b. Top 5 best-selling games ---
-        List<String[]> sorted = new ArrayList<>(records);
-        sorted.sort((a, b) -> Double.compare(
-                parseDouble(b[IDX_TOTAL_SALES]),
-                parseDouble(a[IDX_TOTAL_SALES])));
-        List<String[]> top5Games = sorted.subList(0, Math.min(5, sorted.size()));
+        List<DataRecord> sorted = new ArrayList<>(records);
+        sorted.sort((a, b) -> Double.compare(b.totalSales, a.totalSales));
+        List<DataRecord> top5Games = sorted.subList(0, Math.min(5, sorted.size()));
 
         // --- 3c. Sales by genre ---
         Map<String, Double> salesByGenre = new LinkedHashMap<>();
-        for (String[] row : records) {
-            String genre = row[IDX_GENRE].isEmpty() ? "Unknown" : row[IDX_GENRE];
-            salesByGenre.merge(genre, parseDouble(row[IDX_TOTAL_SALES]), Double::sum);
+        for (DataRecord r : records) {
+            salesByGenre.merge(r.genre, r.totalSales, Double::sum);
         }
-        // Sort genres by sales descending
         List<Map.Entry<String, Double>> genreList = new ArrayList<>(salesByGenre.entrySet());
         genreList.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
 
         // --- 3d. Top publisher by total sales ---
         Map<String, Double> salesByPublisher = new HashMap<>();
-        for (String[] row : records) {
-            String pub = row[IDX_PUBLISHER].isEmpty() ? "Unknown" : row[IDX_PUBLISHER];
-            salesByPublisher.merge(pub, parseDouble(row[IDX_TOTAL_SALES]), Double::sum);
+        for (DataRecord r : records) {
+            salesByPublisher.merge(r.publisher, r.totalSales, Double::sum);
         }
         String topPublisher = Collections.max(salesByPublisher.entrySet(),
                 Map.Entry.comparingByValue()).getKey();
@@ -121,10 +114,9 @@ public class VideoGameAnalytics {
         // --- 3e. Average critic score ---
         double totalScore = 0;
         int scoreCount = 0;
-        for (String[] row : records) {
-            double score = parseDouble(row[IDX_CRITIC]);
-            if (score > 0) {
-                totalScore += score;
+        for (DataRecord r : records) {
+            if (r.criticScore > 0) {
+                totalScore += r.criticScore;
                 scoreCount++;
             }
         }
@@ -132,18 +124,17 @@ public class VideoGameAnalytics {
 
         // --- 3f. Regional sales breakdown ---
         double totalNA = 0, totalJP = 0, totalPAL = 0, totalOther = 0;
-        for (String[] row : records) {
-            totalNA    += parseDouble(row[IDX_NA_SALES]);
-            totalJP    += parseDouble(row[IDX_JP_SALES]);
-            totalPAL   += parseDouble(row[IDX_PAL_SALES]);
-            totalOther += parseDouble(row[IDX_OTHER_SALES]);
+        for (DataRecord r : records) {
+            totalNA    += r.naSales;
+            totalJP    += r.jpSales;
+            totalPAL   += r.palSales;
+            totalOther += r.otherSales;
         }
 
         // --- 3g. Top console by total sales ---
         Map<String, Double> salesByConsole = new HashMap<>();
-        for (String[] row : records) {
-            String console = row[IDX_CONSOLE].isEmpty() ? "Unknown" : row[IDX_CONSOLE];
-            salesByConsole.merge(console, parseDouble(row[IDX_TOTAL_SALES]), Double::sum);
+        for (DataRecord r : records) {
+            salesByConsole.merge(r.console, r.totalSales, Double::sum);
         }
         String topConsole = Collections.max(salesByConsole.entrySet(),
                 Map.Entry.comparingByValue()).getKey();
@@ -163,12 +154,12 @@ public class VideoGameAnalytics {
         System.out.printf("%-5s %-45s %-10s %s%n", "Rank", "Title", "Console", "Sales (M)");
         System.out.println("-".repeat(70));
         for (int i = 0; i < top5Games.size(); i++) {
-            String[] row = top5Games.get(i);
+            DataRecord r = top5Games.get(i);
             System.out.printf("%-5d %-45s %-10s %.2f%n",
                     i + 1,
-                    truncate(row[IDX_TITLE], 44),
-                    row[IDX_CONSOLE],
-                    parseDouble(row[IDX_TOTAL_SALES]));
+                    truncate(r.title, 44),
+                    r.console,
+                    r.totalSales);
         }
 
         System.out.println("\n--- Sales by Genre (Top 5) ---");
@@ -191,7 +182,6 @@ public class VideoGameAnalytics {
 
         System.out.println("\n--- Top Console ---");
         System.out.printf("  %s (%.2f million units)%n", topConsole, topConsoleSales);
-
         System.out.println("============================================");
 
         // ──────────────────────────────────────────
@@ -200,7 +190,6 @@ public class VideoGameAnalytics {
         String outputPath = "summary_report.csv";
 
         try (FileWriter fw = new FileWriter(outputPath)) {
-            // Section 1: Overview
             fw.write("Section,Metric,Value\n");
             fw.write("Overview,Total Records," + records.size() + "\n");
             fw.write("Overview,Total Global Sales (millions)," + String.format("%.2f", totalGlobalSales) + "\n");
@@ -211,18 +200,16 @@ public class VideoGameAnalytics {
             fw.write("Overview,Top Console Sales (millions)," + String.format("%.2f", topConsoleSales) + "\n");
             fw.write("\n");
 
-            // Section 2: Top 5 Games
             fw.write("Top 5 Games,Rank,Title,Console,Total Sales (millions)\n");
             for (int i = 0; i < top5Games.size(); i++) {
-                String[] row = top5Games.get(i);
+                DataRecord r = top5Games.get(i);
                 fw.write("Top 5 Games," + (i + 1) + ","
-                        + escapeCSV(row[IDX_TITLE]) + ","
-                        + escapeCSV(row[IDX_CONSOLE]) + ","
-                        + String.format("%.2f", parseDouble(row[IDX_TOTAL_SALES])) + "\n");
+                        + escapeCSV(r.title) + ","
+                        + escapeCSV(r.console) + ","
+                        + String.format("%.2f", r.totalSales) + "\n");
             }
             fw.write("\n");
 
-            // Section 3: Genre Sales
             fw.write("Genre Sales,Genre,Total Sales (millions)\n");
             for (Map.Entry<String, Double> entry : genreList) {
                 fw.write("Genre Sales," + escapeCSV(entry.getKey()) + ","
@@ -230,7 +217,6 @@ public class VideoGameAnalytics {
             }
             fw.write("\n");
 
-            // Section 4: Regional Sales
             fw.write("Regional Sales,Region,Total Sales (millions)\n");
             fw.write("Regional Sales,North America," + String.format("%.2f", totalNA) + "\n");
             fw.write("Regional Sales,Japan," + String.format("%.2f", totalJP) + "\n");
@@ -250,7 +236,6 @@ public class VideoGameAnalytics {
     // HELPER METHODS
     // ──────────────────────────────────────────
 
-    /** Parse a double safely, returning 0 if empty or invalid. */
     private static double parseDouble(String value) {
         try {
             return value == null || value.isEmpty() ? 0 : Double.parseDouble(value.trim());
@@ -259,12 +244,10 @@ public class VideoGameAnalytics {
         }
     }
 
-    /** Truncate a string to maxLen characters. */
     private static String truncate(String s, int maxLen) {
         return s.length() <= maxLen ? s : s.substring(0, maxLen - 1) + "…";
     }
 
-    /** Wrap a CSV field in quotes if it contains commas or quotes. */
     private static String escapeCSV(String s) {
         if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
             return "\"" + s.replace("\"", "\"\"") + "\"";
@@ -272,10 +255,6 @@ public class VideoGameAnalytics {
         return s;
     }
 
-    /**
-     * Simple CSV line parser that respects quoted fields.
-     * Handles commas inside quoted strings.
-     */
     private static String[] parseCSVLine(String line) {
         List<String> fields = new ArrayList<>();
         StringBuilder sb = new StringBuilder();
@@ -299,5 +278,34 @@ public class VideoGameAnalytics {
         }
         fields.add(sb.toString().trim());
         return fields.toArray(new String[0]);
+    }
+}
+
+// ──────────────────────────────────────────
+// DATA CLASS
+// ──────────────────────────────────────────
+class DataRecord {
+    String title, console, genre, publisher;
+    double totalSales, naSales, jpSales, palSales, otherSales, criticScore;
+
+    public DataRecord(String[] row) {
+        this.title       = row[1];
+        this.console     = row[2].isEmpty() ? "Unknown" : row[2];
+        this.genre       = row[3].isEmpty() ? "Unknown" : row[3];
+        this.publisher   = row[4].isEmpty() ? "Unknown" : row[4];
+        this.criticScore = parseDouble(row[6]);
+        this.totalSales  = parseDouble(row[7]);
+        this.naSales     = parseDouble(row[8]);
+        this.jpSales     = parseDouble(row[9]);
+        this.palSales    = parseDouble(row[10]);
+        this.otherSales  = parseDouble(row[11]);
+    }
+
+    private static double parseDouble(String value) {
+        try {
+            return value == null || value.isEmpty() ? 0 : Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return 0;
+        }
     }
 }
