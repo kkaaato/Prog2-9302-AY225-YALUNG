@@ -236,14 +236,6 @@ public class VideoGameAnalytics {
     // HELPER METHODS
     // ──────────────────────────────────────────
 
-    private static double parseDouble(String value) {
-        try {
-            return value == null || value.isEmpty() ? 0 : Double.parseDouble(value.trim());
-        } catch (NumberFormatException e) {
-            return 0;
-        }
-    }
-
     private static String truncate(String s, int maxLen) {
         return s.length() <= maxLen ? s : s.substring(0, maxLen - 1) + "…";
     }
